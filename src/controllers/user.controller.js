@@ -1,68 +1,61 @@
 import {User} from '../models/user.model.js';
 import userService from '../services/user.service.js';
+
 import { validationResult } from 'express-validator';
 import {BlacklistToken} from '../models/blackListToken.model.js';
+import {ApiError} from  "../utils/ApiError.js"
+import {ApiResponse} from "../utils/ApiResponse.js"
+import {asyncHandler} from  "../utils/asyncHandler.js"
 
-const registerUser = async (req, res, next) => {
-    res.send()
-    console.log(req)
-    console.log("Hello")
+const generateAccessAndRefreshToken = (user) => {
+    const accessToken =  user.generateAccessToken();
+    const refreshToken =  user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    return {accessToken , refreshToken};
+}
 
-    const errors = validationResult(req);
+const registerUser = asyncHandler(async (req, res, next) => {
+    const errors = validationResult(req);    
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+         throw new ApiError(401 , "Please fill all the field correctly")
     }
-
-    const { fullname, email, password } = req.body;
-
-    const isUserAlready = await userModel.findOne({ email });
-
+    const { fullName, email, password } = req.body;
+    const isUserAlready = await User.findOne({ email });
     if (isUserAlready) {
-        return res.status(400).json({ message: 'User already exist' });
+        throw new ApiError(401 , "User already registered . ")
     }
-
-    const hashedPassword = await userModel.hashPassword(password);
-
-    const user = await userService.createUser({
-        firstname: fullname.firstname,
-        lastname: fullname.lastname,
+    const user =await userService.createUser({
+        firstName: fullName.firstName,
+        lastName: fullName.lastName,
         email,
-        password: hashedPassword
-    });
+        password,
+    })
+    const createdUser = await User.findById(user._id).select("--password")
+    res.status(201).json(new ApiResponse(201 , createdUser , "user registered successfully"))
+})
 
-    const token = user.generateAuthToken();
-
-    res.status(201).json({ token, user });
-
-
-}
-const loginUser = async (req, res, next) => {
-
+const loginUser =asyncHandler(async (req, res, next) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    if(!errors.isEmpty()){
+        throw new ApiError(401 , "Please fill all the field correctly")
     }
-
     const { email, password } = req.body;
-
-    const user = await userModel.findOne({ email }).select('+password');
-
+    const user = await User.findOne({ email })
     if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+        throw new ApiError(401 , "Invalid username and password")
     }
-
-    const isMatch = await user.comparePassword(password);
-
-    if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+    const isMatch = await user.comparePassword(password);    
+    if (!isMatch){
+        throw new ApiError(401 , "Incorrect password")
     }
-
-    const token = user.generateAuthToken();
-
-    res.cookie('token', token);
-
-    res.status(200).json({ token, user });
-}
+    const {accessToken , refreshToken} =  generateAccessAndRefreshToken(user)
+    const loggedInUser = await  User.findById(user._id).select("--password") 
+    console.log(user);
+    console.log(loggedInUser);
+    res.cookie('accessToken', accessToken);
+    res.cookie("refreshToken" , refreshToken);
+    res.status(200).json(new ApiResponse(200,loggedInUser ,"Logged in successfully"))      
+})
 
 const getUserProfile = async (req, res, next) => {
 
