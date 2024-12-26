@@ -1,10 +1,9 @@
 import captainController from '../controllers/captain.controller.js';
 import express from 'express';
 import { body } from 'express-validator';
-import authMiddleware from '../middlewares/auth.middleware.js';
+import {verifyAuth} from '../middlewares/verifyAuth.js';
 
 const router = express.Router();
-
 
 router.post('/register', [
     body('email').isEmail().withMessage('Invalid Email'),
@@ -27,7 +26,7 @@ router.post('/login', [
 )
 
 
-router.get('/profile' , authMiddleware.authCaptain, captainController.getCaptainProfile)
+router.get('/profile' , verifyAuth, captainController.getCaptainProfile)
 
-router.get('/logout', authMiddleware.authCaptain, captainController.logoutCaptain)
+router.get('/logout', verifyAuth, captainController.logoutCaptain)
 export default router ;

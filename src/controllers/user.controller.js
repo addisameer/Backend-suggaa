@@ -7,10 +7,11 @@ import {ApiError} from  "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from  "../utils/asyncHandler.js"
 
-const generateAccessAndRefreshToken = (user) => {
+const generateAccessAndRefreshToken = async (user) => {
     const accessToken =  user.generateAccessToken();
     const refreshToken =  user.generateRefreshToken();
     user.refreshToken = refreshToken;
+    await user.save()
     return {accessToken , refreshToken};
 }
 
@@ -30,11 +31,12 @@ const registerUser = asyncHandler(async (req, res, next) => {
         email,
         password,
     })
-    const createdUser = await User.findById(user._id).select("--password")
+    const createdUser = await User.findById(user._id).select("-password")
     res.status(201).json(new ApiResponse(201 , createdUser , "user registered successfully"))
 })
 
 const loginUser =asyncHandler(async (req, res, next) => {
+    //It has one problem , while try to login again  it says incorrect password.
     const errors = validationResult(req);
     if(!errors.isEmpty()){
         throw new ApiError(401 , "Please fill all the field correctly")
@@ -45,18 +47,17 @@ const loginUser =asyncHandler(async (req, res, next) => {
         throw new ApiError(401 , "Invalid username and password")
     }
     const isMatch = await user.comparePassword(password);    
+    console.log(isMatch);
     if (!isMatch){
         throw new ApiError(401 , "Incorrect password")
     }
-    const {accessToken , refreshToken} =  generateAccessAndRefreshToken(user)
-    const loggedInUser = await  User.findById(user._id).select("--password") 
-    console.log(user);
-    console.log(loggedInUser);
+    const {accessToken , refreshToken} =  await  generateAccessAndRefreshToken(user)
+    const loggedInUser = await  User.findById(user._id).select("-password refreshToken") 
     res.cookie('accessToken', accessToken);
     res.cookie("refreshToken" , refreshToken);
     res.status(200).json(new ApiResponse(200,loggedInUser ,"Logged in successfully"))      
 })
-
+   
 const getUserProfile = async (req, res, next) => {
 
     res.status(200).json(req.user);

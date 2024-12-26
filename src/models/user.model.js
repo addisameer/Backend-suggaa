@@ -25,12 +25,11 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: true
     },
     refreshToken : {
         type : String,
     }
-   
 })
 userSchema.methods.generateAccessToken = function () {
     const token  =  jwt.sign(
@@ -59,8 +58,6 @@ userSchema.methods.generateRefreshToken = function () {
 }
 
 userSchema.methods.comparePassword = async function (password) {
-    // console.log(password);
-    // console.log(this.password);
     return await bcrypt.compare(password, this.password);
 }
 

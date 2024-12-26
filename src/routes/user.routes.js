@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 
 import userController from '../controllers/user.controller.js';
-import authMiddleware from '../middlewares/auth.middleware.js';
+import {verifyAuth} from '../middlewares/verifyAuth.js';
 
 const router = express.Router();
 
@@ -21,10 +21,11 @@ router.post('/login', [
     userController.loginUser
 )
 
-router.get('/profile', authMiddleware.authUser, userController.getUserProfile)
+//secured routes
+// router.get('/profile', authMiddleware.authUser, userController.getUserProfile)
 
-router.get('/logout', authMiddleware.authUser, userController.logoutUser)
+router.get('/logout',verifyAuth, userController.logoutUser)
 
 
 
-export default  router;
+export default  router; 
