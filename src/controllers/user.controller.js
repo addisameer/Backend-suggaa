@@ -47,12 +47,11 @@ const loginUser =asyncHandler(async (req, res, next) => {
         throw new ApiError(401 , "Invalid username and password")
     }
     const isMatch = await user.comparePassword(password);    
-    console.log(isMatch);
     if (!isMatch){
         throw new ApiError(401 , "Incorrect password")
     }
     const {accessToken , refreshToken} =  await  generateAccessAndRefreshToken(user)
-    const loggedInUser = await  User.findById(user._id).select("-password refreshToken") 
+    const loggedInUser = await  User.findById(user._id).select("-password -refreshToken") 
     res.cookie('accessToken', accessToken);
     res.cookie("refreshToken" , refreshToken);
     res.status(200).json(new ApiResponse(200,loggedInUser ,"Logged in successfully"))      
